@@ -1,0 +1,59 @@
+version: "3.7"
+
+services:
+    # image project
+    app:
+        container_name: app-laravel
+        build:
+            args:
+                user: vinicius
+                uid: 1000
+            context: .
+            dockerfile: Dockerfile
+        image: viniciuslustosa/laravel-app
+        restart: unless-stopped
+        working_dir: /var/www/
+        volumes:
+            - ./:/var/www
+        depends_on:
+            - redis
+        networks:
+            - laravel
+
+    # nginx
+    nginx:
+        container_name: app-nginx
+        image: nginx:alpine
+        restart: unless-stopped
+        ports:
+            - "8000:80"
+        volumes:
+            - ./:/var/www
+            - ./docker/nginx/:/etc/nginx/conf.d/
+        networks:
+            - laravel
+
+    # queue
+    queue:
+        container_name: app-queue
+        image: viniciuslustosa/laravel-app
+        restart: unless-stopped
+        command: "php artisan queue:work"
+        volumes:
+            - ./:/var/www
+        depends_on:
+            - redis
+            - app
+        networks:
+            - laravel
+
+    # redis
+    redis:
+        container_name: app-redis
+        image: redis:latest
+        networks:
+            - laravel
+
+networks:
+    laravel:
+        driver: bridge
